@@ -12,6 +12,10 @@ STRATEGIES: dict[str, BaseStrategy] = {
 
 
 def get_strategy(key: str) -> BaseStrategy:
+    if key.startswith("custom:"):
+        from ...custom.store import load_custom  # lazy: pulls in the DB layer
+
+        return load_custom(int(key.split(":", 1)[1]))
     try:
         return STRATEGIES[key]
     except KeyError as exc:

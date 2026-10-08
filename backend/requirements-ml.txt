@@ -1,0 +1,2 @@
+# Optional extras for ML-based custom strategies (Strategy Lab). Not needed for the core app.
+scikit-learn>=1.5

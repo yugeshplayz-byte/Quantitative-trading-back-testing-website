@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     git_commit: str = ""
     environment: str = "development"
     seed_demo_data: bool = True
+    # Running pasted Python on the server is remote code execution. OFF unless you opt in.
+    enable_custom_code: bool = False
+    custom_code_token: str = ""  # if set, custom-code endpoints require header X-Admin-Token
+    custom_code_timeout: int = 180  # seconds per sandbox run
 
     @property
     def origins(self) -> list[str]:

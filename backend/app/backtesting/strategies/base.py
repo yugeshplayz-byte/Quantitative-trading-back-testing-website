@@ -52,7 +52,8 @@ class BaseStrategy(ABC):
                 merged[k] = float(v)
         return merged
 
-    def signals(self, md: MarketData, params: dict[str, float]) -> Signals:
+    def signals(self, md: MarketData, params: dict[str, float], train_end: int = 0) -> Signals:
+        """`train_end` = first bar index of the test window; only ML/custom strategies use it."""
         cache_key = (self.key, tuple(sorted(params.items())))
         hit = md.cache.get(cache_key)
         if hit is None:

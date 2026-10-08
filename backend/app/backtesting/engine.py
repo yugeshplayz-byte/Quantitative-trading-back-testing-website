@@ -75,9 +75,10 @@ def run_backtest(
     """Run one backtest and return trades (dicts compatible with `models.Trade`, without ids)."""
     strat = get_strategy(cfg.strategy)
     params = strat.resolve_params(cfg.params)
-    sig: Signals = strat.signals(md, params)
+    cfg_lo, cfg_hi = md.index_range(cfg.start_date, cfg.end_date)
+    sig: Signals = strat.signals(md, params, cfg_lo)  # models may train on bars before cfg_lo only
     if lo is None or hi is None:
-        lo, hi = md.index_range(cfg.start_date, cfg.end_date)
+        lo, hi = cfg_lo, cfg_hi
     inst = get_instrument(cfg.symbol)
     tick, tv, pv = inst.tick_size, inst.tick_value, inst.point_value
     ex, risk, trd = cfg.execution, cfg.risk, cfg.trading
