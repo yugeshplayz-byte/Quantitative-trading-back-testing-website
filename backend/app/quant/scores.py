@@ -82,10 +82,25 @@ def strategy_score(metrics: dict, extra: dict, robustness: float) -> dict:
     prop = 100 * (0.7 * clip01(extra.get("prop_pass_probability")) + 0.3 * clip01(extra.get("prop_survival_90d")))
     parts = {"profitability": profit, "risk": risk, "robustness": robustness, "consistency": consistency,
              "execution_resilience": execution, "prop_suitability": prop}
-    total = sum(parts[k] * w for k, w in STRATEGY_WEIGHTS.items())
+    raw = sum(parts[k] * w for k, w in STRATEGY_WEIGHTS.items())
+    # HONESTY GATE: a strategy that loses money, or whose profit is indistinguishable from luck,
+    # cannot score well no matter how smooth its equity curve looks.
+    exp, pval = metrics.get("expectancy"), metrics.get("expectancy_pvalue")
+    if exp is None or exp <= 0:
+        cap, verdict = 25.0, "No edge: the average trade loses money after costs"
+    elif pval is None or pval > 0.05:
+        cap, verdict = 45.0, (f"Unproven: profit is not statistically significant (p = {pval:.2f}) - "
+                              "consistent with luck" if pval is not None else "Unproven: too few trades to test")
+    else:
+        cap, verdict = 100.0, ("Statistical evidence of a positive edge (p < 0.05) - still confirm out-of-sample "
+                               "and beware multiple-testing if many variants were tried")
+    total = min(raw, cap)
     grade = "A" if total >= 80 else "B" if total >= 65 else "C" if total >= 50 else "D" if total >= 35 else "F"
-    return {"score": float(total), "grade": grade, "components": parts, "weights": STRATEGY_WEIGHTS,
+    return {"score": float(total), "uncapped_score": float(raw), "capped": raw > cap, "cap": cap,
+            "verdict": verdict, "grade": grade, "components": parts, "weights": STRATEGY_WEIGHTS,
             "methodology": [
+                "Honesty gate: score is capped at 25 if expectancy <= 0 after costs, and at 45 if the mean trade "
+                "P&L is not statistically significant (t-test p > 0.05)",
                 "Profitability (20%): 50% profit factor (1.0 -> 0, 2.0 -> 100), 25% CAGR (50% -> 100), 25% average R (0.3 -> 100)",
                 "Risk (20%): 50% max drawdown % (30% -> 0), 30% Sharpe (2.5 -> 100), 20% Calmar (3 -> 100)",
                 "Robustness (25%): the robustness score (OOS, walk-forward, Monte Carlo, parameters, costs, outliers, trade count)",

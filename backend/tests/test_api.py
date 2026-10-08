@@ -117,7 +117,8 @@ def test_prop_firm_endpoints(client):
     assert po["prob_first_payout"] >= po["prob_second_payout"] >= po["prob_third_payout"]
     opt = client.post("/api/prop-firm/optimizer", json={"backtest_id": BT, "simulations": 300,
                                                           "risks": [75, 150, 300]}).json()
-    assert len(opt["rows"]) == 3 and opt["best_risk"] in (75, 150, 300)
+    assert len(opt["rows"]) == 3 and opt["best_risk"] in (None, 75, 150, 300)
+    assert {"achievable", "oversized"} <= set(opt["rows"][0]) and opt["note"]
     assert len(client.get("/api/prop-firm/templates").json()) >= 3
 
 

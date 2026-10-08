@@ -70,6 +70,14 @@ class Bundle:
         r = float(self.df["risk_dollars"].mean()) if len(self.df) else 0.0
         return r if r > 0 else 100.0
 
+    @property
+    def contract_risk(self) -> float | None:
+        """Typical $ risked by a single contract in this backtest (median stop distance x point value)."""
+        if not len(self.df):
+            return None
+        per = (self.df["risk_dollars"] / self.df["quantity"]).replace([float("inf")], float("nan")).dropna()
+        return float(per.median()) if len(per) else None
+
     def daily(self) -> pd.DataFrame:
         return daily_frame(self.df, self.days, self.cfg.starting_balance)
 

@@ -188,6 +188,17 @@ def _significance(pnl: np.ndarray) -> tuple[float | None, float | None]:
     return float(res.statistic), float(res.pvalue)
 
 
+def _expectancy_ci(pnl: np.ndarray) -> tuple[float | None, float | None]:
+    """95% t-interval for the true mean trade P&L. If it spans 0 the edge is unproven."""
+    if len(pnl) < 5 or float(np.std(pnl, ddof=1)) == 0:
+        return None, None
+    from scipy import stats
+
+    se = float(np.std(pnl, ddof=1)) / math.sqrt(len(pnl))
+    h = float(stats.t.ppf(0.975, len(pnl) - 1)) * se
+    return float(pnl.mean() - h), float(pnl.mean() + h)
+
+
 # ----------------------------------------------------------------- aggregation
 def daily_frame(trades: pd.DataFrame, days: list, starting_balance: float) -> pd.DataFrame:
     """One row per trading day (including flat days) with equity and drawdown columns."""
@@ -235,6 +246,7 @@ def compute_metrics(trades: pd.DataFrame, daily: pd.DataFrame, starting_balance:
     else:
         dd_abs, dd_pct = daily_dd_abs, daily_dd_pct
     t_stat, p_val = _significance(pnl)
+    ci_lo, ci_hi = _expectancy_ci(pnl)
     periods = drawdown_periods(list(daily["date"]), eq, starting_balance) if len(daily) else []
     net = float(pnl.sum())
     ndays = max(len(daily), 1)
@@ -266,6 +278,8 @@ def compute_metrics(trades: pd.DataFrame, daily: pd.DataFrame, starting_balance:
         "max_drawdown_daily_pct": daily_dd_pct,
         "expectancy_tstat": t_stat,
         "expectancy_pvalue": p_val,
+        "expectancy_ci95_low": ci_lo,
+        "expectancy_ci95_high": ci_hi,
         "average_drawdown": float(np.mean([p["depth"] for p in periods])) if periods else 0.0,
         "longest_drawdown_days": max([p["duration_days"] for p in periods], default=0),
         "max_consecutive_wins": max_consecutive(pnl, True),

@@ -67,7 +67,8 @@ def risk_optimizer(session: Session, b: Bundle, rules: PropFirmRules, risks: lis
                    seed: int) -> dict:
     key = f"{b.id}:propopt:{req_hash([rules.model_dump(), risks, sims, seed])}"
     def go():
-        return optimize_risk(b.pool, rules, b.avg_risk, risks or DEFAULT_RISKS, sims, seed)
+        return optimize_risk(b.pool, rules, b.avg_risk, risks or DEFAULT_RISKS, sims, seed,
+                             contract_risk=b.contract_risk)
     return cached(session, key, go)
 
 

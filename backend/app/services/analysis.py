@@ -119,7 +119,16 @@ def monte_carlo(session: Session, b: Bundle, cfg: MonteCarloConfig) -> dict:
     def go():
         pnl = b.df["net_pnl"].to_numpy(dtype=float)
         res = run_monte_carlo(pnl, b.avg_risk, cfg)
-        return {"config": cfg.model_dump(), **res}
+        cr = b.contract_risk
+        res["summary"]["contract_risk"] = cr
+        res["summary"]["risk_achievable"] = float(cfg.risk_per_trade is None or cr is None
+                                                  or cfg.risk_per_trade >= cr / 2)
+        res["summary"]["expectancy_ci95_low"] = b.metrics.get("expectancy_ci95_low")
+        res["summary"]["expectancy_ci95_high"] = b.metrics.get("expectancy_ci95_high")
+        return {"config": cfg.model_dump(), **res,
+                "caveat": ("Monte Carlo resamples the trades this backtest ALREADY produced. It shows how path luck "
+                           "changes drawdowns and ending balances, but it cannot tell you whether the underlying edge "
+                           "is real - see the expectancy confidence interval and significance test for that.")}
     return cached(session, key, go)
 
 

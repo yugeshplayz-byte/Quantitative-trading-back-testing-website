@@ -40,4 +40,20 @@ def meta(session: Session = Depends(get_session)):
         "custom_code": {"enabled": s.enable_custom_code, "token_required": bool(s.custom_code_token)},
         "data_source": {"kind": "synthetic", "note": "Deterministic synthetic futures data (seeded). "
                         "Results illustrate platform features - they are NOT evidence of live profitability."},
+        "caveats": CAVEATS,
     })
+
+
+CAVEATS = [
+    "Data: the demo market is synthetic. The default 'random_walk' model has no exploitable edge by design; "
+    "the 'structured' model is engineered for platform validation only. Neither says anything about real markets.",
+    "Fills: signals execute on the next bar's open; stops fill before targets when both trade in one bar; limit "
+    "targets fill only when price trades through them; fees and slippage are charged on every fill. Real fills can be worse.",
+    "Costs are assumptions (commission, exchange fee, slippage, spread). Check them against your broker and the stress tests.",
+    "Optimisation grids and the 'best' parameters are IN-SAMPLE. Picking the best of many variants is selection bias; "
+    "only walk-forward / out-of-sample results are evidence.",
+    "Monte Carlo and prop-firm simulations resample the trades or days this backtest already produced; they cannot prove "
+    "the edge is real and assume the future resembles the past.",
+    "A profit is only meaningful if it is statistically distinguishable from luck - see the p-value and 95% interval on expectancy.",
+    "Custom strategies: the lookahead check is a strong hint, not proof. Train ML models only on data before the test window.",
+]
