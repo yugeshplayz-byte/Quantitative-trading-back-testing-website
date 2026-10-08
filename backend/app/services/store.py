@@ -178,7 +178,7 @@ def list_backtests(session: Session) -> list[dict]:
              "created_at": r.created_at.isoformat(), "tags": r.tags or [], "favorite": bool(r.favorite),
              "notes": r.notes or "", "git_commit": r.git_commit, "seed": r.config.get("seed"),
              "trade_count": len(r.trades), "metrics": r.metrics, "meta": r.meta or {},
-             "dataset": r.dataset} for r in rows]
+             "dataset": r.dataset, "config": r.config} for r in rows]
 
 
 # ------------------------------------------------------------------ analysis cache

@@ -16,6 +16,8 @@ def test_health_and_meta(client):
 def test_seeded_backtests_are_deterministic(client):
     rows = client.get("/api/backtests").json()
     assert [r["id"] for r in rows] == [f"BT-00000{i}" for i in range(1, 6)]
+    detail_keys = set(client.get(f"/api/backtests/{BT}").json())
+    assert detail_keys <= set(rows[0]), "list rows must carry the same fields as the detail view (UI relies on it)"
     first = client.get(f"/api/backtests/{BT}").json()
     again = client.get(f"/api/backtests/{BT}").json()
     assert first["metrics"] == again["metrics"]

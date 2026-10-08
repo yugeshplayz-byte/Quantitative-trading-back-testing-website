@@ -80,10 +80,25 @@ def dashboard(session: Session, b: Bundle) -> dict:
 
 
 # ------------------------------------------------------------------ descriptive analytics
+def _benchmark(b: Bundle, dates: list[str]) -> list[float]:
+    """Equity of simply holding one contract of the traded instrument over the same days."""
+    from ..backtesting.market import get_market_data
+
+    md = get_market_data(b.cfg.symbol, b.cfg.seed, b.cfg.timeframe, b.cfg.data_model)
+    close = md.df.groupby(md.df["date"].astype(str))["close"].last()
+    series = close.reindex(dates).ffill().bfill()
+    pv = get_instrument(b.cfg.symbol).point_value
+    first = float(series.iloc[0])
+    return [round(b.cfg.starting_balance + (float(c) - first) * pv, 2) for c in series]
+
+
 def analytics(b: Bundle, kind: str) -> dict:
     df, days, bal = b.df, b.days, b.cfg.starting_balance
     if kind == "equity":
-        return A.equity_curves(df, days, bal)
+        out = A.equity_curves(df, days, bal)
+        out["benchmark"] = _benchmark(b, out["dates"])
+        out["benchmark_label"] = f"Buy & hold 1 {b.cfg.symbol} contract (underlying)"
+        return out
     if kind == "drawdowns":
         return A.drawdown_series(df, days, bal)
     if kind == "calendar":
