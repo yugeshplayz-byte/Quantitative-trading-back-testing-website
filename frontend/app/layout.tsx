@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Futures strategy backtesting, robustness analysis and prop-firm simulation",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="h-full">
