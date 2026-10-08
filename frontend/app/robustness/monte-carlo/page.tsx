@@ -75,7 +75,7 @@ export default function MonteCarloPage() {
             <KpiCard label="Expected longest losing streak" value={num(s.expected_longest_losing_streak, 1)} sub={`95th pct ${num(s.p95_longest_losing_streak, 0)}`} />
             <KpiCard label="Historical trades used" value={int(s.historical_trades)} />
             <KpiCard label="Risk scale" value={`${num(s.risk_scale)}×`} />
-            <KpiCard label="Avg trade 95% CI" value={`${money(s.expectancy_ci95_low, 1)} to ${money(s.expectancy_ci95_high, 1)}`} hint="If this interval includes $0, the edge is unproven" tone={(s.expectancy_ci95_low ?? -1) > 0 ? "up" : "warn"} />
+            <KpiCard label="Avg trade 95% CI" value={`${money(s.expectancy_ci95_low, 0)} … ${money(s.expectancy_ci95_high, 0)}`} hint="If this interval includes $0, the edge is unproven" tone={(s.expectancy_ci95_low ?? -1) > 0 ? "up" : "warn"} />
           </KpiGrid>
           <p className="rounded-md border border-border bg-surface px-3 py-2 text-[11.5px] text-muted">{q.data.caveat}</p>
           <Panel title="Equity paths" subtitle="Shaded: 5–95% and 25–75% of simulated paths · gold: median · grey: sample paths">

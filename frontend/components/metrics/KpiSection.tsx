@@ -44,7 +44,13 @@ export function KpiSection({ m }: { m: Metrics }) {
         <KpiCard label="Total Fees" value={money(m.total_fees)} tone="warn" hint="Commission + exchange fees" />
         <KpiCard label="Slippage Cost" value={money(m.slippage_cost)} tone="warn" hint="Slippage + half-spread on market fills" />
         <KpiCard label="Gross P&L (pre-cost)" value={signedMoney(m.gross_pnl_total)} tone={signTone(m.gross_pnl_total)} hint="Before fees and slippage" />
-        <KpiCard label="Edge p-value" value={m.expectancy_pvalue === null || m.expectancy_pvalue === undefined ? "–" : num(m.expectancy_pvalue, 3)} hint="t-test of average trade vs 0. Above 0.05 = can't rule out luck." tone={(m.expectancy_pvalue ?? 1) <= 0.05 && (m.expectancy ?? 0) > 0 ? "up" : "warn"} />
+        <KpiCard
+          label="Edge p-value"
+          value={m.expectancy_pvalue === null || m.expectancy_pvalue === undefined ? "–" : num(m.expectancy_pvalue, 3)}
+          hint="t-test of the average trade vs 0. Above 0.05 = can't rule out luck."
+          sub={m.expectancy_pvalue === null || m.expectancy_pvalue === undefined ? undefined : (m.expectancy ?? 0) <= 0 ? (m.expectancy_pvalue <= 0.05 ? "significantly NEGATIVE" : "no evidence of edge") : m.expectancy_pvalue <= 0.05 ? "significant" : "not significant"}
+          tone={(m.expectancy ?? 0) <= 0 ? "down" : (m.expectancy_pvalue ?? 1) <= 0.05 ? "up" : "warn"}
+        />
         <KpiCard label="Avg R" value={num(m.avg_r, 3)} tone={signTone(m.avg_r)} hint="Average net P&L as a multiple of initial risk" />
       </KpiGrid>
     </div>
