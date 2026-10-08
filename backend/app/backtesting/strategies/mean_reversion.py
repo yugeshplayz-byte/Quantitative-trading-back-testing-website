@@ -20,8 +20,8 @@ class MeanReversionStrategy(BaseStrategy):
     parameters = [
         ParameterSpec(key="lookback", label="Z-score lookback (bars)", default=30, min=15, max=60, step=5),
         ParameterSpec(key="z_entry", label="Entry z-score", default=2.0, min=1.2, max=3.0, step=0.2),
-        ParameterSpec(key="max_atr_pct", label="Skip above ATR percentile", default=85, min=50, max=100, step=5),
-        ParameterSpec(key="max_er", label="Skip if efficiency ratio above", default=0.30, min=0.1, max=1.0, step=0.05),
+        ParameterSpec(key="max_atr_pct", label="Skip above ATR percentile (100 = off)", default=100, min=50, max=100, step=5),
+        ParameterSpec(key="max_er", label="Skip if efficiency ratio above (1 = off)", default=1.0, min=0.1, max=1.0, step=0.05),
         ParameterSpec(key="start_after", label="No entries first N min", default=30, min=0, max=60, step=5),
         ParameterSpec(key="end_before", label="No entries last N min", default=45, min=0, max=120, step=15),
     ]

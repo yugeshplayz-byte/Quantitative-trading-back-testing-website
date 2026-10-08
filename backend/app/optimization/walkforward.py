@@ -36,7 +36,7 @@ def walk_forward(cfg: BacktestConfig, train_months: int, test_months: int, step_
                  xs: list[float] | None = None, ys: list[float] | None = None) -> dict:
     if metric not in HIGHER_IS_BETTER or metric == "prop_pass_probability":
         metric = "sharpe"
-    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe)
+    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     # default axes: the strategy's first two parameters, 3 values each
     from .grid import parameter_catalog
 

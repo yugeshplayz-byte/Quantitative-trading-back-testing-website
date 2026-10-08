@@ -81,7 +81,7 @@ def trade_chart(b: Bundle, trade_id: str, before: int = 40, after: int = 24) -> 
     if row.empty:
         raise KeyError(trade_id)
     trade = next(t for t in b.trades if t["id"] == trade_id)
-    md = get_market_data(b.cfg.symbol, b.cfg.seed, b.cfg.timeframe)
+    md = get_market_data(b.cfg.symbol, b.cfg.seed, b.cfg.timeframe, b.cfg.data_model)
     i0, i1 = max(trade["entry_bar"] - before, 0), min(trade["exit_bar"] + after, len(md.df) - 1)
     key = "__emas__"
     if key not in md.cache:

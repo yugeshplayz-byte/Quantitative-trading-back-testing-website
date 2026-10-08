@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import pandas as pd
 
 from ..backtesting.runner import RunOutput, run_config, trades_frame
 from ..backtesting.strategies import get_strategy
@@ -87,7 +88,7 @@ def prefetch_custom(cfg: BacktestConfig, param_sets: list[dict]) -> None:
     from ..backtesting.market import get_market_data
 
     strat = get_strategy(cfg.strategy)
-    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe)
+    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     lo, _ = md.index_range(cfg.start_date, cfg.end_date)
     strat.prefetch(md, [strat.resolve_params({**cfg.params, **p}) for p in param_sets], lo)
 
@@ -222,6 +223,16 @@ def optimise(cfg: BacktestConfig, param_x: str, param_y: str, metric: str,
     cur = {"x": current_value(cfg, param_x), "y": current_value(cfg, param_y)}
     ci = (int(np.abs(np.array(ys) - cur["y"]).argmin()), int(np.abs(np.array(xs) - cur["x"]).argmin()))
     cur["value"] = float(Z[ci]) if np.isfinite(Z[ci]) else None
+    n_valid = int(np.isfinite(Z).sum())
+    years = max(len(pd.bdate_range(cfg.start_date, cfg.end_date)), 1) / 252
+    null_best = (math.sqrt(2 * math.log(n_valid)) / math.sqrt(years)) if n_valid > 1 else 0.0
+    bias = {
+        "cells_tested": n_valid, "years": years, "expected_best_sharpe_if_no_edge": null_best,
+        "note": ("These results are IN-SAMPLE: the best cell was picked after seeing the outcome. Even if the "
+                 f"strategy had zero edge, testing {n_valid} variants over {years:.1f} years would typically give a "
+                 f"best-cell Sharpe of about {null_best:.2f} by luck alone. Only trust a parameter set that also "
+                 "holds up in walk-forward (out-of-sample) testing."),
+    }
     return {"param_x": param_x, "param_y": param_y, "x_values": xs, "y_values": ys, "metric": metric,
-            "higher_is_better": hb, **res, "best": best, "current": cur,
+            "higher_is_better": hb, **res, "best": best, "current": cur, "selection_bias": bias,
             "stability": stability(res["grid"], hb, xs, ys), "runs": len(xs) * len(ys)}

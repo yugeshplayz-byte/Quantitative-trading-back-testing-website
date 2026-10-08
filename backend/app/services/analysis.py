@@ -53,7 +53,7 @@ def light_warnings(b: Bundle) -> list[dict]:
     two = next(r for r in slip if r["ticks"] == 2)
     ctx = {
         "trades": m["total_trades"], "outlier_warning": out["warning"], "outlier_severity": out["severity"],
-        "base_net": m["net_profit"],
+        "base_net": m["net_profit"], "expectancy": m["expectancy"], "pvalue": m.get("expectancy_pvalue"),
         "slip2_net": two["net_profit"], "max_drawdown_pct": m["max_drawdown_pct"], "sharpe": m["sharpe"] or 0,
         "regimes_covered": int((b.df["regime"].value_counts() >= 20).sum()) if len(b.df) else 0,
         "lookahead": b.meta.get("lookahead"),
@@ -139,8 +139,12 @@ def stress(session: Session, b: Bundle, runs: int = 300) -> dict:
 
 
 def optimization(session: Session, b: Bundle, param_x: str, param_y: str, metric: str,
-                 xs: list[float] | None, ys: list[float] | None, prop: PropFirmRules | None) -> dict:
-    key = f"{b.id}:opt:{req_hash([param_x, param_y, metric, xs, ys, prop.model_dump() if prop else None])}"
+                 xs: list[float] | None, ys: list[float] | None, prop: PropFirmRules | None,
+                 internal: bool = False) -> dict:
+    # Only USER-initiated searches count as optimisation trials (selection bias); the platform's own
+    # robustness probes are stored under a different key prefix and are not counted.
+    tag = "optint" if internal else "opt"
+    key = f"{b.id}:{tag}:{req_hash([param_x, param_y, metric, xs, ys, prop.model_dump() if prop else None])}"
     def go():
         res = G.optimise(b.cfg, param_x, param_y, metric, xs, ys, prop)
         res["strategy"] = b.cfg.strategy
@@ -149,8 +153,9 @@ def optimization(session: Session, b: Bundle, param_x: str, param_y: str, metric
 
 
 def walk_forward(session: Session, b: Bundle, train: int, test: int, step: int, metric: str,
-                 px: str | None, py: str | None, xs, ys) -> dict:
-    key = f"{b.id}:opt:wf:{req_hash([train, test, step, metric, px, py, xs, ys])}"
+                 px: str | None, py: str | None, xs, ys, internal: bool = False) -> dict:
+    tag = "optint" if internal else "opt"
+    key = f"{b.id}:{tag}:wf:{req_hash([train, test, step, metric, px, py, xs, ys])}"
     def go():
         res = run_wf(b.cfg, train, test, step, metric, px, py, xs, ys)
         res["strategy"] = b.cfg.strategy
@@ -189,9 +194,9 @@ def robustness(session: Session, b: Bundle) -> dict:
         mc = monte_carlo(session, b, MonteCarloConfig(backtest_id=b.id, simulations=1000,
                                                       trades=int(min(250, max(len(b.df), 20))),
                                                       starting_balance=bal, seed=7))
-        grid = optimization(session, b, px, py, "sharpe", None, None, None)
+        grid = optimization(session, b, px, py, "sharpe", None, None, None, internal=True)
         tr, te, sp = default_wf_months(b)
-        wf = walk_forward(session, b, tr, te, sp, "sharpe", None, None, None, None)
+        wf = walk_forward(session, b, tr, te, sp, "sharpe", None, None, None, None, internal=True)
         rules = PropFirmRules(starting_balance=bal)
         ev = pm.evaluation_summary(pm.simulate(b.pool, rules, 1500, rules.max_evaluation_days,
                                                1.0, 5, "evaluation"), rules)
@@ -237,6 +242,7 @@ def robustness(session: Session, b: Bundle) -> dict:
             "oos_degradation": deg_ps,
             "oos_net_per_day": (agg.get("oos") or {}).get("net_profit_per_day"),
             "base_net": st["baseline"]["net_profit"], "slip2_net": two["net_profit"],
+            "expectancy": b.metrics["expectancy"], "pvalue": b.metrics.get("expectancy_pvalue"),
             "stability_class": grid["stability"]["classification"], "optimization_trials": trials,
             "max_drawdown_pct": b.metrics["max_drawdown_pct"], "sharpe": b.metrics["sharpe"] or 0,
             "regimes_covered": int((b.df["regime"].value_counts() >= 20).sum()) if len(b.df) else 0,

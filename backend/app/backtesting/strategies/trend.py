@@ -18,10 +18,10 @@ class TrendStrategy(BaseStrategy):
     )
     default_symbol = "MNQ"
     parameters = [
-        ParameterSpec(key="fast", label="Fast EMA", default=5, min=3, max=21, step=2),
+        ParameterSpec(key="fast", label="Fast EMA", default=9, min=3, max=21, step=2),
         ParameterSpec(key="slow", label="Slow EMA", default=21, min=15, max=60, step=5),
         ParameterSpec(key="vwap_filter", label="VWAP filter (0/1)", default=1, min=0, max=1, step=1),
-        ParameterSpec(key="min_er", label="Min efficiency ratio", default=0.15, min=0.0, max=0.5, step=0.05),
+        ParameterSpec(key="min_er", label="Min efficiency ratio (0 = off)", default=0.0, min=0.0, max=0.5, step=0.05),
         ParameterSpec(key="start_after", label="No entries first N min", default=15, min=0, max=60, step=5),
         ParameterSpec(key="end_before", label="No entries last N min", default=60, min=0, max=120, step=15),
     ]

@@ -75,7 +75,8 @@ def correlation(session: Session, ids: list[str], kind: str) -> dict:
     if kind == "instruments":
         frames = {}
         for sym in ("MNQ", "NQ", "MES", "ES"):
-            md = get_market_data(sym, bundles[0].cfg.seed if bundles else 42, "5m")
+            md = get_market_data(sym, bundles[0].cfg.seed if bundles else 42, "5m",
+                                 bundles[0].cfg.data_model if bundles else "random_walk")
             d = md.df.groupby("date")["close"].last()
             d.index = pd.to_datetime(d.index)
             frames[sym] = d.pct_change()

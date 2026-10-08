@@ -102,6 +102,15 @@ def build_warnings(ctx: dict) -> list[dict]:
         w.append({"code": code, "severity": severity, "title": title, "detail": detail})
 
     n = ctx.get("trades", 0)
+    exp, pval = ctx.get("expectancy"), ctx.get("pvalue")
+    if exp is not None and n >= 5:
+        if exp <= 0:
+            add("no_edge", "high", "No edge after costs",
+                f"Average trade loses ${abs(exp):,.2f} after fees and slippage - this strategy does not make money here.")
+        elif pval is not None and pval > 0.05:
+            add("significance", "medium" if pval < 0.2 else "high", "Profit not statistically significant",
+                f"Mean trade P&L is positive but p = {pval:.2f}: results this good are common from luck alone. "
+                "Treat as unproven.")
     if n < 30:
         add("few_trades", "high", "Too few trades", f"Only {n} trades - statistics are not meaningful below ~100.")
     elif n < 100:

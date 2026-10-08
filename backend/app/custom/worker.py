@@ -130,18 +130,19 @@ def _lookahead_check(cls, bars, train, params, mode, first, lo, hi) -> dict:
     span = hi - lo
     if span < 400:
         return {"status": "skipped", "message": "Test window too short for lookahead detection."}
-    cuts = [lo + span // 4, lo + span // 2, lo + 3 * span // 4]
+    cuts = [lo + span * k // 6 for k in range(1, 6)]
     bad = 0
     for c in cuts:
         part = _run_one(cls, bars.iloc[: c + 1].reset_index(drop=True), train, params, mode)
-        w0 = max(0, c - 300)
+        w0 = max(0, c - 500)
         bad += int((part["side"][w0 : c + 1] != first["side"][w0 : c + 1]).sum())
     if bad:
         return {"status": "suspect", "mismatches": bad,
                 "message": f"{bad} signals changed when future bars were removed - your strategy likely "
                            "uses future information (lookahead bias). Check shift(), rolling windows and "
                            "any scaling/normalisation computed over the full series."}
-    return {"status": "ok", "message": "No lookahead detected at 3 truncation points."}
+    return {"status": "ok", "message": "No lookahead detected at 5 truncation points. This check is a strong "
+            "hint, not proof - it cannot catch leaks that only affect bars far from the cut points."}
 
 
 def main(job_dir: str) -> None:

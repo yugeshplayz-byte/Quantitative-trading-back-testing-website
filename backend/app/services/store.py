@@ -94,7 +94,7 @@ def _restore_trades(raw: list[dict]) -> list[dict]:
 def _bundle_from_row(row: BacktestRow) -> Bundle:
     cfg = BacktestConfig.model_validate(row.config)
     trades = _restore_trades(row.trades)
-    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe)
+    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     lo, hi = md.index_range(cfg.start_date, cfg.end_date)
     return Bundle(
         int_id=row.id, name=row.name, cfg=cfg, trades=trades, df=trades_frame(trades),
@@ -128,7 +128,7 @@ def create_backtest(session: Session, cfg: BacktestConfig, name: str | None = No
                     version: str = "v1", tags: list[str] | None = None, check_lookahead: bool = True) -> Bundle:
     strat = get_strategy(cfg.strategy)
     meta: dict = {}
-    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe)
+    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     if cfg.strategy.startswith("custom:"):
         lo, _ = md.index_range(cfg.start_date, cfg.end_date)
         la = strat.prefetch(md, [strat.resolve_params(cfg.params)], lo, check_lookahead=check_lookahead)
@@ -140,7 +140,7 @@ def create_backtest(session: Session, cfg: BacktestConfig, name: str | None = No
     metrics = clean(compute_metrics(tdf, daily, cfg.starting_balance))
     row = BacktestRow(
         name=name or cfg.name or f"{strat.name} {cfg.symbol}", strategy=cfg.strategy, version=version,
-        dataset=f"{cfg.symbol} {cfg.timeframe} synthetic seed={cfg.seed}",
+        dataset=f"{cfg.symbol} {cfg.timeframe} synthetic/{cfg.data_model} seed={cfg.seed}",
         config=cfg.model_dump(mode="json"), metrics=metrics, trades=clean(out.trades),
         notes=notes or cfg.notes or "", tags=tags or cfg.tags, favorite=False, meta=meta,
         git_commit=git_commit(), created_at=utcnow())

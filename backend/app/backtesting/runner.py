@@ -25,7 +25,7 @@ def days_between(md: MarketData, lo: int, hi: int) -> list:
 
 
 def run_config(cfg: BacktestConfig, lo: int | None = None, hi: int | None = None) -> RunOutput:
-    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe)
+    md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     if lo is None or hi is None:
         lo, hi = md.index_range(cfg.start_date, cfg.end_date)
     raw = run_backtest(md, cfg, lo, hi)

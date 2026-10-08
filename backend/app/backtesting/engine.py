@@ -6,7 +6,8 @@ Execution model (documented in docs/QUANT_ASSUMPTIONS.md):
   the target, the STOP is assumed to fill first (conservative).
 * Gaps: if a bar opens beyond the stop, the fill is the open (not the stop price).
 * Slippage + half the spread are charged on every market-type fill (entries, stops, signal and
-  end-of-day exits). Limit fills (targets, partials) pay no slippage.
+  end-of-day exits). Limit fills (targets, partials) pay no slippage but are only filled when price
+  trades THROUGH the level by `limit_through_ticks` (default 1) - a touch is not assumed to fill.
 * Fees = (commission + exchange fee) per contract per side.
 * Trade P&L: gross (price move x point value), minus fees, minus slippage = net.
 * MAE/MFE are measured against the initial entry using bar highs/lows and expressed in $ for the
@@ -87,6 +88,7 @@ def run_backtest(
     latency_ticks = ex.latency_ms / 500.0
     bar_min = md.bar_minutes
     mg = cfg.management
+    through = ex.limit_through_ticks * tick  # price must trade this far past a resting limit to fill it
 
     o, h, l, c = md.o, md.h, md.l, md.c
     day_id, is_last, atr_a = md.day_id, md.is_last, md.atr
@@ -190,7 +192,7 @@ def run_backtest(
                 "mae_points": round(mae_pts, 2),
                 "mfe_points": round(mfe_pts, 2),
                 "duration_minutes": round(max(dur, 1.0), 1),
-                "regime": md.regime[p.entry_bar],
+                "regime": md.regime[p.signal_bar],  # known at decision time (never the entry bar's close)
                 "setup": p.setup,
                 "confidence": p.conf,
                 "atr_percentile": round(p.atr_pct, 1),
@@ -286,20 +288,21 @@ def run_backtest(
                         p.scale_in_done = True
                 if mg.partial_profit and not p.partial_done and p.qty >= 2:
                     ppx = p.entry + d * mg.partial_at_r * p.stop_pts
-                    if (hi_i >= ppx) if d > 0 else (lo_i <= ppx):
+                    if (hi_i >= ppx + through) if d > 0 else (lo_i <= ppx - through):
                         q = min(max(1, int(p.qty * mg.partial_pct)), p.qty - 1)
                         close_leg(p, ppx, q, False)
                         event(p, i, "scale_out", ppx, q)
                         p.partial_done = True
                 if mg.scale_out and not p.scale_out_done and p.qty >= 2:
                     spx = p.entry + d * 2 * mg.partial_at_r * p.stop_pts
-                    if (hi_i >= spx) if d > 0 else (lo_i <= spx):
+                    if (hi_i >= spx + through) if d > 0 else (lo_i <= spx - through):
                         q = min(max(1, int(p.qty * mg.partial_pct)), p.qty - 1)
                         close_leg(p, spx, q, False)
                         event(p, i, "scale_out", spx, q)
                         p.scale_out_done = True
                 p.best = max(p.best, hi_i) if d > 0 else min(p.best, lo_i)
-                tgt_hit = p.target is not None and ((hi_i >= p.target) if d > 0 else (lo_i <= p.target))
+                tgt_hit = p.target is not None and ((hi_i >= p.target + through) if d > 0
+                                                    else (lo_i <= p.target - through))
                 if tgt_hit:
                     gapped = (op_i >= p.target) if d > 0 else (op_i <= p.target)
                     px = op_i if (gapped and not entered_now) else p.target

@@ -47,12 +47,12 @@ class RiskConfig(BaseModel):
 
 class StopConfig(BaseModel):
     type: Literal["fixed_point", "fixed_dollar", "atr", "structure"] = "atr"
-    value: float = Field(1.0, gt=0)  # points | dollars per contract | ATR multiple | buffer (ticks)
+    value: float = Field(1.5, gt=0)  # points | dollars per contract | ATR multiple | buffer (ticks)
 
 
 class TargetConfig(BaseModel):
     type: Literal["fixed_point", "risk_reward", "atr"] = "risk_reward"
-    value: float = Field(3.0, gt=0)
+    value: float = Field(2.0, gt=0)
 
 
 class ManagementConfig(BaseModel):
@@ -74,6 +74,9 @@ class ExecutionConfig(BaseModel):
     slippage_ticks: float = Field(1.0, ge=0)  # per market-type fill
     spread_ticks: float = Field(0.5, ge=0)  # full spread; half crossed per market fill
     latency_ms: int = Field(0, ge=0, le=5000)  # extra adverse slip: 1 tick per 500ms, entries only
+    # Resting limit orders (targets, partials) fill only if price trades THROUGH the level by this many
+    # ticks - merely touching it is not assumed to get filled (queue position). 0 = optimistic touch fills.
+    limit_through_ticks: float = Field(1.0, ge=0, le=10)
 
 
 class BacktestConfig(BaseModel):
@@ -92,6 +95,8 @@ class BacktestConfig(BaseModel):
     management: ManagementConfig = Field(default_factory=ManagementConfig)
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
     seed: int = 42  # seeds the (synthetic) market-data generator
+    # "random_walk": no exploitable structure (honest default). "structured": engineered edge, validation only.
+    data_model: Literal["random_walk", "structured"] = "random_walk"
     name: str | None = None
     notes: str | None = None
     tags: list[str] = Field(default_factory=list)

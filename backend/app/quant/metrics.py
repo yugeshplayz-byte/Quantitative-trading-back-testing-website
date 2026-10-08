@@ -5,7 +5,9 @@ Assumptions (also documented in docs/QUANT_ASSUMPTIONS.md):
 * Sharpe / Sortino use DAILY returns over every trading day in the test window
   (days without trades count as 0), annualised with sqrt(252). Risk-free rate = 0.
 * Sortino's downside deviation is sqrt(mean(min(r - target, 0)^2)) over ALL observations.
-* Drawdown is measured on closed-trade (end-of-day) equity, starting from the starting balance.
+* Headline drawdown is measured on equity after every closed trade (conservative); the drawdown
+  periods table and daily metrics use end-of-day closing equity. Neither includes open-trade (MAE) excursions.
+* `expectancy_pvalue` is a t-test of mean trade P&L vs 0 - a rough luck-vs-edge indicator.
 * Calmar = CAGR / max drawdown % (both computed on the same equity curve).
 """
 from __future__ import annotations
@@ -172,6 +174,20 @@ def max_consecutive(pnl: Iterable[float], winners: bool) -> int:
     return max(runs) if runs else 0
 
 
+def _significance(pnl: np.ndarray) -> tuple[float | None, float | None]:
+    """Two-sided one-sample t-test of mean trade P&L against 0 (is the edge distinguishable from luck?).
+
+    Trades are treated as independent, which flatters clustered strategies slightly - read p-values
+    as a rough guide, and remember that testing many variants inflates the chance of a lucky one.
+    """
+    if len(pnl) < 5 or float(np.std(pnl, ddof=1)) == 0:
+        return None, None
+    from scipy import stats
+
+    res = stats.ttest_1samp(pnl, 0.0)
+    return float(res.statistic), float(res.pvalue)
+
+
 # ----------------------------------------------------------------- aggregation
 def daily_frame(trades: pd.DataFrame, days: list, starting_balance: float) -> pd.DataFrame:
     """One row per trading day (including flat days) with equity and drawdown columns."""
@@ -209,7 +225,16 @@ def compute_metrics(trades: pd.DataFrame, daily: pd.DataFrame, starting_balance:
     losses = int((pnl < 0).sum())
     avg_w, avg_l = average_winner(pnl), average_loser(pnl)
     eq = daily["equity"].to_numpy(dtype=float)
-    dd_abs, dd_pct = max_drawdown(np.concatenate([[starting_balance], eq]))
+    daily_dd_abs, daily_dd_pct = max_drawdown(np.concatenate([[starting_balance], eq]))
+    # Headline drawdown uses the equity after EVERY closed trade (not end-of-day snapshots, which
+    # hide intraday give-backs between trades), so it is never smaller than the daily figure.
+    if n:
+        ordered = trades.sort_values("exit_dt") if "exit_dt" in trades.columns else trades
+        trade_eq = starting_balance + np.cumsum(ordered["net_pnl"].to_numpy(dtype=float))
+        dd_abs, dd_pct = max_drawdown(np.concatenate([[starting_balance], trade_eq]))
+    else:
+        dd_abs, dd_pct = daily_dd_abs, daily_dd_pct
+    t_stat, p_val = _significance(pnl)
     periods = drawdown_periods(list(daily["date"]), eq, starting_balance) if len(daily) else []
     net = float(pnl.sum())
     ndays = max(len(daily), 1)
@@ -237,6 +262,10 @@ def compute_metrics(trades: pd.DataFrame, daily: pd.DataFrame, starting_balance:
         "recovery_factor": (net / dd_abs) if dd_abs > 0 else None,
         "max_drawdown": dd_abs,
         "max_drawdown_pct": dd_pct,
+        "max_drawdown_daily": daily_dd_abs,
+        "max_drawdown_daily_pct": daily_dd_pct,
+        "expectancy_tstat": t_stat,
+        "expectancy_pvalue": p_val,
         "average_drawdown": float(np.mean([p["depth"] for p in periods])) if periods else 0.0,
         "longest_drawdown_days": max([p["duration_days"] for p in periods], default=0),
         "max_consecutive_wins": max_consecutive(pnl, True),
