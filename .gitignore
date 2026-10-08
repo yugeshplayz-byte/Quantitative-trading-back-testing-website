@@ -16,6 +16,9 @@ venv/
 backend/*.db
 backend/*.sqlite3
 backend/data_cache/
+# Your market data stays private: never commit it
+backend/data/real/*
+!backend/data/real/README.md
 
 # Node / Next.js
 node_modules/

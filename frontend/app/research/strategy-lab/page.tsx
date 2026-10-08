@@ -182,7 +182,7 @@ function Lab({ meta }: { meta: Meta }) {
                 <Field label="Start (test begins)"><Input type="date" value={run.start} min="2022-03-01" onChange={(e) => setRun({ ...run, start: e.target.value })} /></Field>
                 <Field label="End"><Input type="date" value={run.end} max="2025-12-31" onChange={(e) => setRun({ ...run, end: e.target.value })} /></Field>
                 <NumberField label="Risk per trade ($)" value={run.risk} step={25} min={1} onChange={(v) => setRun({ ...run, risk: v ?? 150 })} />
-                <Field label="Market model"><Select value={run.model} onChange={(e) => setRun({ ...run, model: e.target.value as DataModel })}><option value="random_walk">Random walk (no edge)</option><option value="structured">Engineered edge (validation)</option></Select></Field>
+                <Field label="Market model"><Select value={run.model} onChange={(e) => setRun({ ...run, model: e.target.value as DataModel })}><option value="real">Real data (your CSV)</option><option value="random_walk">Random walk (no edge)</option><option value="structured">Engineered edge (validation)</option></Select></Field>
               </div>
               <p className="mt-2 text-[11px] text-muted">Training history available before the start date: about {trainDays} trading days{trainDays < 150 ? " - short; an ML model may be badly under-trained" : ""}. On the default random-walk market a sound strategy should NOT be profitable - if yours is, suspect a bug or leakage before celebrating.</p>
               <div className="mt-3 flex items-center gap-3">

@@ -1,4 +1,5 @@
 /** Response shapes of the analytics endpoints (backend/app/services). */
+import type { ReadinessData } from "@/components/metrics/ReadinessPanel";
 import type { BacktestResult, DrawdownPeriod, Metrics, ScoreResult, Warning } from "./types";
 
 export interface MonthlyRow {
@@ -17,7 +18,7 @@ export interface DashboardData {
   recent_trades: Record<string, string | number>[];
   warnings: Warning[];
   health: { name: string; status: "good" | "warn" | "bad"; detail: string }[];
-  cached_score: { score: number; grade: string; robustness: number; overfitting: string } | null;
+  cached_score: { score: number; grade: string; robustness: number; overfitting: string; readiness?: string } | null;
 }
 
 export interface GroupMetrics {
@@ -143,7 +144,20 @@ export interface RobustnessData {
   score: ScoreResult;
   overfitting: { level: "LOW" | "MEDIUM" | "HIGH"; score: number; factors: Record<string, number>; weights: Record<string, number>; methodology: string[] };
   warnings: Warning[];
+  readiness: ReadinessData;
   inputs: Record<string, unknown>;
+}
+
+export interface DatasetReport {
+  symbol: string;
+  files: string[];
+  ok: boolean;
+  bars: number;
+  days: number;
+  start: string | null;
+  end: string | null;
+  source_bar_minutes?: number;
+  issues: { severity: "error" | "warning" | "info"; message: string }[];
 }
 
 export interface PropMcSummary {

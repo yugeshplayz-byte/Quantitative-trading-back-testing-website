@@ -18,6 +18,7 @@ from ..prop_firm import montecarlo as pm
 from ..quant import analysis as A
 from ..quant import metrics as M
 from ..quant import scores as S
+from ..quant.readiness import readiness
 from ..quant import stress as ST
 from ..quant.monte_carlo import run_monte_carlo
 from .store import Bundle, cache_peek, cached, count_optimization_trials, req_hash
@@ -92,6 +93,18 @@ def _benchmark(b: Bundle, dates: list[str]) -> list[float]:
     return [round(b.cfg.starting_balance + (float(c) - first) * pv, 2) for c in series]
 
 
+def _events(b: Bundle) -> dict:
+    """Synthetic data uses the sample calendar; REAL data needs the user's own events.csv (never the sample)."""
+    if b.cfg.data_model != "real":
+        return A.events(b.df, b.days, b.cfg.starting_balance)
+    from ..data.real import load_events
+
+    cal = load_events()
+    if cal is None:
+        return A.events(b.df, b.days, b.cfg.starting_balance, use_sample=False)
+    return A.events(b.df, b.days, b.cfg.starting_balance, cal=cal)
+
+
 def analytics(b: Bundle, kind: str) -> dict:
     df, days, bal = b.df, b.days, b.cfg.starting_balance
     if kind == "equity":
@@ -115,11 +128,11 @@ def analytics(b: Bundle, kind: str) -> dict:
         return A.streaks(df)
     if kind == "regimes":
         return {**A.regimes(df, days, bal), "volatility": A.volatility(df, days, bal)["rows"],
-                "events": A.events(df, days, bal)}
+                "events": _events(b)}
     if kind == "volatility":
         return A.volatility(df, days, bal)
     if kind == "events":
-        return A.events(df, days, bal)
+        return _events(b)
     if kind == "performance":
         return {"metrics": b.metrics, "long_short": A.long_short(df, days, bal),
                 "calendar": A.calendar_analytics(df, days, bal),
@@ -271,7 +284,23 @@ def robustness(session: Session, b: Bundle) -> dict:
             "max_drawdown_pct": b.metrics["max_drawdown_pct"], "sharpe": b.metrics["sharpe"] or 0,
             "regimes_covered": int((b.df["regime"].value_counts() >= 20).sum()) if len(b.df) else 0,
             "lookahead": b.meta.get("lookahead")})
-        return {"robustness": rob, "score": score, "overfitting": over, "warnings": warn,
+        rows = {r["label"]: r for r in outliers["rows"]}
+        ready = readiness({
+            "data_model": b.cfg.data_model, "trades": len(b.df), "expectancy": b.metrics["expectancy"],
+            "pvalue": b.metrics.get("expectancy_pvalue"), "ci_low": b.metrics.get("expectancy_ci95_low"),
+            "base_net": st["baseline"]["net_profit"], "slip2_net": two["net_profit"],
+            "comm15_net": next(r for r in st["commission"] if r["multiplier"] == 1.5)["net_profit"],
+            "wf_windows": len(wf["windows"]), "wf_consistency": wf.get("consistency"),
+            "wf_oos_net": (agg.get("stitched_oos") or {}).get("net_profit"),
+            "outlier_top1_net": rows["Top 1%"]["net_profit"], "outlier_top5_net": rows["Top 5%"]["net_profit"],
+            "top10_share": outliers["top10_share_of_gross_profit"],
+            "stability_class": grid["stability"]["classification"],
+            "custom": b.cfg.strategy.startswith("custom:"), "lookahead": b.meta.get("lookahead"),
+            "max_dd_pct": b.metrics["max_drawdown_pct"],
+            "months": (b.cfg.end_date - b.cfg.start_date).days / 30.44,
+            "regimes_covered": int((b.df["regime"].value_counts() >= 20).sum()) if len(b.df) else 0,
+            "trials": trials})
+        return {"robustness": rob, "score": score, "overfitting": over, "warnings": warn, "readiness": ready,
                 "inputs": {"walk_forward": {"windows": len(wf["windows"]), "consistency": wf.get("consistency"),
                                             "aggregate": wf.get("aggregate")},
                            "grid": {"param_x": px, "param_y": py, "stability": grid["stability"]},
@@ -281,6 +310,7 @@ def robustness(session: Session, b: Bundle) -> dict:
     session.merge(AnalysisCache(
         key=f"{b.id}:score", created_at=utcnow(),
         payload={"score": out["score"]["score"], "grade": out["score"]["grade"],
-                 "robustness": out["robustness"]["score"], "overfitting": out["overfitting"]["level"]}))
+                 "robustness": out["robustness"]["score"], "overfitting": out["overfitting"]["level"],
+                 "readiness": out["readiness"]["verdict"]}))
     session.commit()
     return out

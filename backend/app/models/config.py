@@ -96,7 +96,8 @@ class BacktestConfig(BaseModel):
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
     seed: int = 42  # seeds the (synthetic) market-data generator
     # "random_walk": no exploitable structure (honest default). "structured": engineered edge, validation only.
-    data_model: Literal["random_walk", "structured"] = "random_walk"
+    # "real": your own CSV data in backend/data/real (see docs/REAL_DATA.md).
+    data_model: Literal["random_walk", "structured", "real"] = "random_walk"
     name: str | None = None
     notes: str | None = None
     tags: list[str] = Field(default_factory=list)

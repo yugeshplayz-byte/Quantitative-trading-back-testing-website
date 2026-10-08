@@ -10,6 +10,7 @@ from ..config import get_settings, git_commit
 from ..db import CustomStrategyRow, get_session
 from ..prop_firm.optimizer import DEFAULT_RISKS
 from ..data.events import EVENT_TYPES
+from ..data.real import data_dir, list_datasets
 from ..data.synthetic import REGIMES
 from ..models.config import BacktestConfig
 from ..utils import clean
@@ -41,10 +42,13 @@ def meta(session: Session = Depends(get_session)):
         "data_source": {"kind": "synthetic", "note": "Deterministic synthetic futures data (seeded). "
                         "Results illustrate platform features - they are NOT evidence of live profitability."},
         "caveats": CAVEATS,
+        "real_data": {"directory": str(data_dir()), "datasets": list_datasets()},
     })
 
 
 CAVEATS = [
+    "Real data (when used): check the data-quality report. Timestamps, bar labelling, contract rolls and missing bars "
+    "all change results; the platform reports what it finds but cannot know if your file is wrong.",
     "Data: the demo market is synthetic. The default 'random_walk' model has no exploitable edge by design; "
     "the 'structured' model is engineered for platform validation only. Neither says anything about real markets.",
     "Fills: signals execute on the next bar's open; stops fill before targets when both trade in one bar; limit "

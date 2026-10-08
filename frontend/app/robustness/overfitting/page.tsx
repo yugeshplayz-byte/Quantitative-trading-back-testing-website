@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard, KpiGrid } from "@/components/metrics/KpiCard";
+import { ReadinessPanel } from "@/components/metrics/ReadinessPanel";
 import { ScoreBar } from "@/components/metrics/ScoreBar";
 import { WarningList } from "@/components/metrics/WarningList";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,10 @@ export default function OverfittingPage() {
         const prop = r.inputs.prop as PropMcSummary;
         return (
           <div className="space-y-4">
+            <div>
+              <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-foreground/90">Deployment readiness</h2>
+              <ReadinessPanel data={r.readiness} />
+            </div>
             <div className={"rounded-lg border p-4 " + (tone === "up" ? "border-up/40 bg-up/5" : tone === "warn" ? "border-warn/40 bg-warn/5" : "border-down/40 bg-down/5")}>
               <div className="flex flex-wrap items-center gap-6">
                 <div>

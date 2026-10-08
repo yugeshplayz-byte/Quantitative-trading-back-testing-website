@@ -31,7 +31,7 @@ Browser ──► Next.js (Vercel) ──HTTP/JSON──► FastAPI (Railway / R
 ```
 .
 ├── README.md  .env.example  .gitignore  render.yaml
-├── docs/                      QUANT_ASSUMPTIONS.md · STRATEGY_LAB.md
+├── docs/                      QUANT_ASSUMPTIONS.md · STRATEGY_LAB.md · REAL_DATA.md
 ├── .github/workflows/ci.yml   backend tests + frontend lint/typecheck/build
 ├── docker-compose.yml         optional: Postgres + backend + frontend in containers
 ├── backend/
@@ -123,7 +123,7 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-~110 tests cover: profit factor, expectancy, Sharpe, Sortino, drawdown, streaks (hand-computed expected values); Monte Carlo reproducibility; prop-firm pass/fail logic for each drawdown type; **no-lookahead tests** (truncating the future must not change any earlier indicator, signal or trade); **honesty tests** (no edge on a random walk, costs always hurt, scores capped); the API; and the sandbox.
+~170 tests cover (including hand-computed engine fill/fee/slippage scenarios, walk-forward leakage checks and the real-data loader): profit factor, expectancy, Sharpe, Sortino, drawdown, streaks (hand-computed expected values); Monte Carlo reproducibility; prop-firm pass/fail logic for each drawdown type; **no-lookahead tests** (truncating the future must not change any earlier indicator, signal or trade); **honesty tests** (no edge on a random walk, costs always hurt, scores capped); the API; and the sandbox.
 
 Frontend checks:
 
@@ -144,9 +144,15 @@ Every custom run gets an automatic **lookahead check** (the data is truncated at
 
 Pasted code is **arbitrary code execution** on the backend host. It runs in a separate subprocess with a scrubbed environment (no `DATABASE_URL`/secrets), an import allow-list, no `open`/`eval`/`exec`, and a timeout, but **Python cannot be perfectly sandboxed**. Therefore: keep it off on public deployments; enable it on your own machine; if you host it, restrict network access and set `CUSTOM_CODE_TOKEN`; never expose it to people you do not trust.
 
-## Using your own market data later
+## Testing real strategies on real data
 
-Data enters through one function, `load_bars()` in `backend/app/data/synthetic.py`, returning the columns in `BAR_COLUMNS` (timestamp, OHLCV, session minute, day id). Replace it with a loader for your MNQ/MES history and everything else (engine, analytics, robustness, prop simulation) keeps working. Regimes are always re-derived causally from price. Built-in strategies live in `backend/app/backtesting/strategies/`; add a class and register it in `__init__.py`.
+**Synthetic data cannot tell you whether to trade a strategy.** To evaluate one you intend to use:
+
+1. Put your bars in `backend/data/real/` (`MNQ.csv`, `MES_1m.csv`, ...; 1- or 5-minute OHLCV; git-ignored). Format, timezone and bar-label conventions: [docs/REAL_DATA.md](docs/REAL_DATA.md).
+2. Configuration → Data → **Real data (your CSV)**. Read the data-quality report (gaps, duplicates, suspected contract rolls, short history) before trusting anything.
+3. Run it, then open **Robustness → Overfitting**. The **Deployment readiness** checklist applies conservative gates (real data, trade count, statistical significance, cost resilience, walk-forward, outlier dependence, parameter stability, lookahead, drawdown, history). Its best possible verdict is *paper-trade candidate*; the platform never says a strategy is safe to run live.
+
+Add built-in strategies in `backend/app/backtesting/strategies/` (register in `__init__.py`), or paste Python in the Strategy Lab.
 
 ## GitHub workflow
 

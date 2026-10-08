@@ -28,6 +28,10 @@ def run_config(cfg: BacktestConfig, lo: int | None = None, hi: int | None = None
     md = get_market_data(cfg.symbol, cfg.seed, cfg.timeframe, cfg.data_model)
     if lo is None or hi is None:
         lo, hi = md.index_range(cfg.start_date, cfg.end_date)
+        if hi - lo < 50:
+            first, last = str(md.df["date"].iloc[0]), str(md.df["date"].iloc[-1])
+            raise ValueError(f"No (or too few) bars between {cfg.start_date} and {cfg.end_date}: the {cfg.data_model} "
+                             f"{cfg.symbol} dataset spans {first} to {last}. Adjust the dates.")
     raw = run_backtest(md, cfg, lo, hi)
     trades = []
     for n, t in enumerate(raw, start=1):

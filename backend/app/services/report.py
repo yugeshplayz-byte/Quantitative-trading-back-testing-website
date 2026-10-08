@@ -44,6 +44,7 @@ def build_report(session: Session, b: Bundle) -> dict:
                             "monte_carlo": rob["inputs"]["prop"], "survival_90d": rob["inputs"]["survival_90d"]},
         "risk_analysis": {"risk_of_ruin": ror, "losing_streaks": RK.losing_streak_report(b)},
         "score": rob["score"], "robustness": rob["robustness"], "overfitting": rob["overfitting"],
+        "readiness": rob["readiness"],
         "warnings": rob["warnings"],
         "data_note": "Generated from deterministic synthetic data unless a real data feed was connected.",
         "net_pnl_check": float(pnl.sum()),
@@ -84,6 +85,10 @@ def render_html(r: dict) -> str:
     sec = []
     sec.append(f"<h1>{html.escape(s['name'])} <small>{s['id']}</small></h1>"
                f"<p>{s['symbol']} - {s['strategy']} - {s['start_date']} to {s['end_date']} - commit {s['git_commit']}</p>")
+    rd = r["readiness"]
+    sec.append(f"<h2>Deployment readiness: {html.escape(rd['verdict'].replace('_', ' '))}</h2><p>{html.escape(rd['headline'])}</p>"
+               + _table([{"check": c["label"], "status": c["status"].upper(), "detail": c["detail"]} for c in rd["checks"]],
+                        ["check", "status", "detail"]))
     sec.append(f"<h2>Strategy score: {r['score']['score']:.0f}/100 (grade {r['score']['grade']})</h2>"
                + _table([{"category": k, "score": v, "weight": r['score']['weights'][k]}
                          for k, v in r["score"]["components"].items()], ["category", "score", "weight"]))

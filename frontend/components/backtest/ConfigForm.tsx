@@ -3,6 +3,7 @@
 import { Panel } from "@/components/ui/card";
 import { Field, Input, NumberField, Select, ToggleField } from "@/components/ui/inputs";
 import type { BacktestConfig, Strategy } from "@/lib/types";
+import type { DatasetReport } from "@/lib/types-api";
 
 type Cfg = BacktestConfig;
 
@@ -10,11 +11,14 @@ export function ConfigForm({
   value,
   onChange,
   strategies,
+  datasets = [],
 }: {
   value: Cfg;
   onChange: (c: Cfg) => void;
   strategies: Strategy[];
+  datasets?: DatasetReport[];
 }) {
+  const realForSymbol = datasets.find((d) => d.symbol === value.symbol);
   const set = <K extends keyof Cfg>(key: K, v: Cfg[K]) => onChange({ ...value, [key]: v });
   const nested = <K extends "trading" | "risk" | "stop" | "target" | "management" | "execution">(key: K, patch: Partial<Cfg[K]>) =>
     onChange({ ...value, [key]: { ...value[key], ...patch } });
@@ -92,16 +96,45 @@ export function ConfigForm({
         )}
       </Panel>
 
-      <Panel title="Data">
+      <Panel title="Data" subtitle="Only real data can inform a decision to trade a strategy.">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Market model" className="col-span-2" hint={value.data_model === "random_walk" ? "No exploitable structure: an honest strategy should NOT make money here." : "Engineered structure for platform validation only - results say nothing about real markets."}>
+          <Field
+            label="Market data"
+            className="col-span-2"
+            hint={{
+              random_walk: "Synthetic, no exploitable structure: an honest strategy should NOT make money here.",
+              structured: "Synthetic with engineered structure, for platform validation only - says nothing about real markets.",
+              real: "Your own CSV bars from backend/data/real (see docs/REAL_DATA.md). Check the quality report below.",
+            }[value.data_model]}
+          >
             <Select value={value.data_model} onChange={(e) => set("data_model", e.target.value as Cfg["data_model"])}>
-              <option value="random_walk">Synthetic random walk (default, no edge)</option>
+              <option value="real" disabled={!realForSymbol}>
+                Real data (your CSV){realForSymbol ? "" : ` - no ${value.symbol} file found`}
+              </option>
+              <option value="random_walk">Synthetic random walk (demo, no edge)</option>
               <option value="structured">Synthetic engineered-edge (validation only)</option>
             </Select>
           </Field>
-          <NumberField label="Data seed" value={value.seed} step={1} onChange={(v) => set("seed", Math.round(v ?? 42))} hint="Same seed = identical market" />
+          {value.data_model !== "real" && (
+            <NumberField label="Data seed" value={value.seed} step={1} onChange={(v) => set("seed", Math.round(v ?? 42))} hint="Same seed = identical market" />
+          )}
         </div>
+        {value.data_model === "real" && realForSymbol && (
+          <div className="mt-3 space-y-1.5 rounded-md border border-border p-2.5 text-[11.5px]">
+            <div className="font-semibold">
+              {realForSymbol.files.join(", ")} · {realForSymbol.bars.toLocaleString()} bars · {realForSymbol.days} days · {realForSymbol.start} → {realForSymbol.end}
+            </div>
+            {realForSymbol.issues.length === 0 && <div className="text-up">No data-quality issues found.</div>}
+            {realForSymbol.issues.map((i, k) => (
+              <div key={k} className={i.severity === "error" ? "text-down" : i.severity === "warning" ? "text-warn" : "text-muted"}>
+                {i.severity.toUpperCase()}: {i.message}
+              </div>
+            ))}
+          </div>
+        )}
+        {!realForSymbol && (
+          <p className="mt-3 text-[11px] text-muted">No real {value.symbol} data found. Put <code className="num">{value.symbol}.csv</code> in <code className="num">backend/data/real/</code> to enable it.</p>
+        )}
       </Panel>
 
       <Panel title="Trading">

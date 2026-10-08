@@ -12,11 +12,13 @@ import { Field, Input, Select } from "@/components/ui/inputs";
 import { apiPost } from "@/lib/api";
 import { useApiQuery, useBt } from "@/lib/hooks";
 import type { BacktestConfig, BacktestResult, Strategy, StrategyPreset } from "@/lib/types";
+import type { DatasetReport } from "@/lib/types-api";
 
 interface Meta {
   strategies: Strategy[];
   default_config: BacktestConfig;
   custom_code: { enabled: boolean };
+  real_data: { directory: string; datasets: DatasetReport[] };
 }
 
 export default function ConfigurationPage() {
@@ -115,7 +117,7 @@ function Editor({ meta, presets, onPresetSaved }: { meta: Meta; presets: Strateg
         </div>
         {error ? <div className="mt-3"><ErrorBlock error={error} /></div> : null}
       </Panel>
-      <ConfigForm value={cfg} onChange={setCfg} strategies={meta.strategies} />
+      <ConfigForm value={cfg} onChange={setCfg} strategies={meta.strategies} datasets={meta.real_data.datasets} />
     </div>
   );
 }

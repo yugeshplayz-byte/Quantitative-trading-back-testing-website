@@ -71,7 +71,7 @@ export interface ExecutionConfig {
 }
 
 export type Symbol = "MNQ" | "NQ" | "MES" | "ES";
-export type DataModel = "random_walk" | "structured";
+export type DataModel = "random_walk" | "structured" | "real";
 
 export interface BacktestConfig {
   strategy: string;

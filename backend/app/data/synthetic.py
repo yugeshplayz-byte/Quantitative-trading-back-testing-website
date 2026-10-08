@@ -35,7 +35,7 @@ BARS_PER_DAY = 78
 EPOCH_START = "2022-01-03"
 EPOCH_END = "2025-12-31"
 BAR_COLUMNS = ["ts", "date", "open", "high", "low", "close", "volume", "gen_regime", "tod", "day_id"]
-DATA_MODELS = ("random_walk", "structured")
+DATA_MODELS = ("random_walk", "structured")  # synthetic generators ("real" is handled by data/real.py)
 REGIMES = ["Trending", "Ranging", "Bull", "Bear", "Neutral", "High Volatility", "Low Volatility"]
 
 # structured model: (vol multiplier, AR(1) coefficient per bar, drift in bar-sigmas, weight)
@@ -180,9 +180,17 @@ def generate_5m_bars(symbol: str, seed: int = 42, model: str = "random_walk") ->
     return df[BAR_COLUMNS]
 
 
-@lru_cache(maxsize=16)
 def load_bars(symbol: str, seed: int = 42, timeframe: str = "5m", model: str = "random_walk") -> pd.DataFrame:
-    """Return OHLCV bars for the whole synthetic epoch. Replace this to plug in real data."""
+    """OHLCV bars for a backtest: synthetic ('random_walk' / 'structured') or REAL CSV data ('real')."""
+    if model == "real":
+        from .real import load_real_bars
+
+        return load_real_bars(symbol, timeframe)  # cached by file signature, seed is irrelevant
+    return _load_synthetic(symbol, seed, timeframe, model)
+
+
+@lru_cache(maxsize=16)
+def _load_synthetic(symbol: str, seed: int, timeframe: str, model: str) -> pd.DataFrame:
     df = generate_5m_bars(symbol, seed, model)
     if timeframe == "5m":
         return df

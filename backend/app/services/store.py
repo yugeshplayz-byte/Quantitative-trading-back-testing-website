@@ -26,6 +26,12 @@ _BUNDLES: "OrderedDict[int, Bundle]" = OrderedDict()
 MAX_BUNDLES = 12
 
 
+def _real_files(symbol: str) -> list[str]:
+    from ..data.real import dataset_files
+
+    return [p.name for p in dataset_files(symbol)]
+
+
 def code_for(int_id: int) -> str:
     return f"BT-{int_id:06d}"
 
@@ -148,7 +154,9 @@ def create_backtest(session: Session, cfg: BacktestConfig, name: str | None = No
     metrics = clean(compute_metrics(tdf, daily, cfg.starting_balance))
     row = BacktestRow(
         name=name or cfg.name or f"{strat.name} {cfg.symbol}", strategy=cfg.strategy, version=version,
-        dataset=f"{cfg.symbol} {cfg.timeframe} synthetic/{cfg.data_model} seed={cfg.seed}",
+        dataset=(f"{cfg.symbol} {cfg.timeframe} REAL data ({', '.join(_real_files(cfg.symbol))})"
+                 if cfg.data_model == "real" else
+                 f"{cfg.symbol} {cfg.timeframe} synthetic/{cfg.data_model} seed={cfg.seed}"),
         config=cfg.model_dump(mode="json"), metrics=metrics, trades=clean(out.trades),
         notes=notes or cfg.notes or "", tags=tags or cfg.tags, favorite=False, meta=meta,
         git_commit=git_commit(), created_at=utcnow())

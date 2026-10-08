@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     git_commit: str = ""
     environment: str = "development"
     seed_demo_data: bool = True
+    # Real market data: drop CSV files named like MNQ.csv / MNQ_1m.csv into this folder (see docs/REAL_DATA.md).
+    real_data_dir: str = "./data/real"
+    real_data_tz: str = "America/New_York"  # timezone of timestamps in the CSVs that carry no UTC offset
+    real_data_bar_label: str = "start"  # "start" or "end": whether a bar's timestamp is its open or its close time
     # Running pasted Python on the server is remote code execution. OFF unless you opt in.
     enable_custom_code: bool = False
     custom_code_token: str = ""  # if set, custom-code endpoints require header X-Admin-Token

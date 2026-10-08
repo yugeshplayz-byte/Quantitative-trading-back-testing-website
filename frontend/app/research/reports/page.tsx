@@ -7,6 +7,7 @@ import { TimeSeriesChart } from "@/components/charts/TimeSeriesChart";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EdgeVerdict } from "@/components/metrics/EdgeVerdict";
 import { KpiSection } from "@/components/metrics/KpiSection";
+import { ReadinessPanel, type ReadinessData } from "@/components/metrics/ReadinessPanel";
 import { ScoreBar } from "@/components/metrics/ScoreBar";
 import { StatTable } from "@/components/metrics/StatTable";
 import { WarningList } from "@/components/metrics/WarningList";
@@ -39,6 +40,7 @@ interface Report {
   score: ScoreResult;
   robustness: { score: number };
   overfitting: { level: string; score: number };
+  readiness: ReadinessData;
   warnings: Warning[];
   data_note: string;
 }
@@ -75,6 +77,7 @@ export default function ReportsPage() {
             <p className="text-[12px] text-muted">{r.summary.symbol} · {r.summary.strategy} · {shortDate(r.summary.start_date)} → {shortDate(r.summary.end_date)} · {r.summary.config.data_model === "structured" ? "ENGINEERED synthetic market (validation only)" : "synthetic random-walk market"} · seed {r.summary.seed} · commit {r.summary.git_commit} · generated {r.generated_at.slice(0, 16).replace("T", " ")} UTC</p>
             <div className="mt-3"><EdgeVerdict metrics={r.performance} /></div>
           </Panel>
+          <Panel title="Deployment readiness"><ReadinessPanel data={r.readiness} /></Panel>
           <Panel title="2 · Final score & warnings">
             <div className="grid gap-4 xl:grid-cols-2">
               <div>

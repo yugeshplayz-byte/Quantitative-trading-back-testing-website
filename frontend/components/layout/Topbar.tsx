@@ -35,8 +35,8 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <div className="hidden items-center gap-1.5 lg:flex">
           <Badge>{current.symbol}</Badge>
           <Badge>{current.config.timeframe}</Badge>
-          <Badge tone={current.config.data_model === "structured" ? "warn" : "neutral"}>
-            {current.config.data_model === "structured" ? "engineered market" : "random walk"}
+          <Badge tone={current.config.data_model === "structured" ? "warn" : current.config.data_model === "real" ? "accent" : "neutral"}>
+            {current.config.data_model === "structured" ? "engineered market" : current.config.data_model === "real" ? "real data" : "random walk"}
           </Badge>
           {current.tags.slice(0, 2).map((t) => (
             <Badge key={t}>{t}</Badge>

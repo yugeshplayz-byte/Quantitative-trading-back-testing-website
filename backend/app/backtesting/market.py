@@ -101,6 +101,16 @@ def build_market_data(df: pd.DataFrame, symbol: str, seed: int, timeframe: str, 
         swing_high=df["high"].rolling(10, min_periods=1).max().tolist(), vwap=vwap, er=er)
 
 
-@lru_cache(maxsize=12)
 def get_market_data(symbol: str, seed: int, timeframe: str, data_model: str = "random_walk") -> MarketData:
+    sig: tuple = ()
+    if data_model == "real":
+        from ..data.real import signature
+
+        sig = signature(symbol)  # new/changed CSV files invalidate the cache
+        seed = 0
+    return _market_data(symbol, seed, timeframe, data_model, sig)
+
+
+@lru_cache(maxsize=12)
+def _market_data(symbol: str, seed: int, timeframe: str, data_model: str, sig: tuple) -> MarketData:
     return build_market_data(load_bars(symbol, seed, timeframe, data_model), symbol, seed, timeframe, data_model)

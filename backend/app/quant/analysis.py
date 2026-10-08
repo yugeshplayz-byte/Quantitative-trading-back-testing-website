@@ -253,21 +253,33 @@ def volatility(df: pd.DataFrame, days: list, bal: float) -> dict:
     return {"rows": rows}
 
 
-def events(df: pd.DataFrame, days: list, bal: float) -> dict:
+NO_CALENDAR_NOTE = ("Event analysis is unavailable for real data until you supply an official event calendar: put "
+                    "events.csv (columns date,event[,time]) in the real-data folder. The built-in calendar is a SAMPLE "
+                    "and would give meaningless results on real prices.")
+
+
+def events(df: pd.DataFrame, days: list, bal: float, cal: pd.DataFrame | None = None, note: str | None = None,
+           use_sample: bool = True) -> dict:
     """Before = prior trading day; During = event day, first 90 min after max(release, RTH open);
     After = rest of the event day."""
-    cal = event_calendar()
+    if cal is None:
+        if not use_sample:
+            return {"rows": [], "baseline": None, "note": NO_CALENDAR_NOTE}
+        cal = event_calendar()
+        note = note or SAMPLE_NOTE
+    note = note or "Event dates supplied by you in events.csv."
     day_set = set(days)
     cal = cal[cal["date"].isin(day_set)]
     out = []
     if len(df) == 0:
-        return {"rows": [], "note": SAMPLE_NOTE}
+        return {"rows": [], "note": note}
     tdf = df.copy()
     tdf["dt"] = tdf["entry_dt"]
     tdf["d"] = tdf["date"]
     ordered_days = sorted(day_set)
     prev = {d: ordered_days[i - 1] for i, d in enumerate(ordered_days) if i > 0}
-    for ev in EVENT_TYPES:
+    names = list(EVENT_TYPES) + [e for e in sorted(cal["event"].unique()) if e not in EVENT_TYPES]
+    for ev in names:
         e = cal[cal["event"] == ev]
         phases = {"Before": [], "During": [], "After": []}
         for r in e.itertuples():
@@ -287,7 +299,7 @@ def events(df: pd.DataFrame, days: list, bal: float) -> dict:
         out.append(row)
     non_event_days = day_set - set(cal["date"])
     base = df[df["date"].isin(non_event_days)]
-    return {"rows": out, "baseline": subset_metrics(base, days, bal), "note": SAMPLE_NOTE}
+    return {"rows": out, "baseline": subset_metrics(base, days, bal), "note": note}
 
 
 SAMPLE_NOTE = ("Event dates come from an approximate SAMPLE calendar (data/events.py), "

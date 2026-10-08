@@ -73,13 +73,20 @@ def combine(session: Session, weights: dict[str, float]) -> dict:
 def correlation(session: Session, ids: list[str], kind: str) -> dict:
     bundles = [load_bundle(session, i) for i in ids]
     if kind == "instruments":
+        from ..data.real import RealDataError
+
         frames = {}
         for sym in ("MNQ", "NQ", "MES", "ES"):
-            md = get_market_data(sym, bundles[0].cfg.seed if bundles else 42, "5m",
-                                 bundles[0].cfg.data_model if bundles else "random_walk")
+            try:
+                md = get_market_data(sym, bundles[0].cfg.seed if bundles else 42, "5m",
+                                     bundles[0].cfg.data_model if bundles else "random_walk")
+            except RealDataError:
+                continue  # real data is only available for the symbols you supplied
             d = md.df.groupby("date")["close"].last()
             d.index = pd.to_datetime(d.index)
             frames[sym] = d.pct_change()
+        if len(frames) < 2:
+            raise ValueError("Instrument correlation needs data for at least two instruments.")
         df = pd.DataFrame(frames).dropna()
         labels = list(df.columns)
     else:
