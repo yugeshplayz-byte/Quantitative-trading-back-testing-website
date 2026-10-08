@@ -50,7 +50,7 @@ Browser ──► Next.js (Vercel) ──HTTP/JSON──► FastAPI (Railway / R
 │   ├── requirements.txt  requirements-dev.txt  requirements-ml.txt
 │   └── Procfile  railway.json  Dockerfile
 └── frontend/
-    ├── app/                   one route per page (33 routes)
+    ├── app/                   one route per page (29 routes)
     ├── components/            ui/ charts/ layout/ metrics/ tables/ forms/ prop/ backtest/
     ├── lib/                   api client, types, hooks, formatting
     └── vercel.json  package.json
