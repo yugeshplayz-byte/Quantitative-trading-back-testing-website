@@ -1,0 +1,31 @@
+# Render Blueprint: New -> Blueprint -> select this repo.
+# Creates the FastAPI web service and a Postgres database. ALLOWED_ORIGINS must be set by you
+# (it is the URL of your Vercel frontend) - Render will prompt for it.
+databases:
+  - name: quant-db
+    plan: free
+    databaseName: quant
+    user: quant
+
+services:
+  - type: web
+    name: quant-backtester-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quant-db
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: ENABLE_CUSTOM_CODE
+        value: "false"

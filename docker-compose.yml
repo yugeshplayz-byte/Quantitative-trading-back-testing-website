@@ -1,0 +1,40 @@
+# Local containers: Postgres + API + web. For development only - the credentials below are throwaway.
+#   docker compose up --build        ->  web http://localhost:3000   api http://localhost:8000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: quant
+      POSTGRES_PASSWORD: quant-local-only
+      POSTGRES_DB: quant
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quant"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://quant:quant-local-only@db:5432/quant
+      ALLOWED_ORIGINS: http://localhost:3000
+      ENABLE_CUSTOM_CODE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
