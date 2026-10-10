@@ -38,3 +38,6 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 *.log
+.agents/
+skills-lock.json
+DESIGN.md
