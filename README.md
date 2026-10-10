@@ -106,6 +106,8 @@ Open <http://localhost:3000>.
 | `DATABASE_URL` | backend | `sqlite:///./quant.db` (default) or a PostgreSQL URL. `postgres://` and `postgresql://` are normalised automatically. |
 | `ALLOWED_ORIGINS` | backend | Comma-separated browser origins allowed by CORS, e.g. `http://localhost:3000,https://your-app.vercel.app`. No wildcard is ever used. |
 | `ALLOWED_ORIGIN_REGEX` | backend | Optional regex for Vercel preview URLs, e.g. `^https://your-app-.*\.vercel\.app$`. |
+| `APP_PASSWORD` / `APP_USERNAME` | backend | Password-protects the whole site and API with HTTP Basic login (`admin` by default). Strongly recommended for any public link. `/api/health` stays open for health checks. |
+| `FRONTEND_DIR` | backend | Folder of the exported website; when present the backend serves it at `/` (set automatically in the Docker image). |
 | `ENABLE_CUSTOM_CODE` | backend | `true` enables the Strategy Lab (runs pasted Python). **Off by default.** See Security. |
 | `CUSTOM_CODE_TOKEN` | backend | If set, Strategy Lab endpoints require header `X-Admin-Token`. |
 | `CUSTOM_CODE_TIMEOUT` | backend | Seconds allowed per sandbox run (default 180). |
@@ -168,7 +170,21 @@ git push -u origin feat/my-change     # then open a Pull Request
 
 CI (`.github/workflows/ci.yml`) runs backend tests and frontend lint / typecheck / build on every push and PR.
 
-## Deployment
+## Get one link you can open from any computer (recommended)
+
+The root `Dockerfile` builds the website into static files and lets the FastAPI backend serve **both the site and the API from a single URL** - one service, no CORS, no second host. Protect it with a password (HTTP Basic login):
+
+1. Push this repo to GitHub (done if you are reading this there).
+2. Create a free account at <https://render.com> and connect GitHub.
+3. **New → Blueprint** → choose this repository. It reads `render.yaml` (one Docker web service + a free Postgres database).
+4. When asked, set **`APP_PASSWORD`** to something long and random (the username is `admin`). Click **Apply**.
+5. After the build (about 5–10 minutes) Render shows your URL, e.g. `https://quant-backtester-xxxx.onrender.com`. Open it from any computer; the browser asks for `admin` + your password.
+
+Notes: the free tier sleeps after ~15 minutes idle (the first request then takes about a minute to wake it). The hosted copy has no access to your private CSV data (it is git-ignored), so for **real-data testing run locally** or attach a persistent disk and upload your CSVs. Leave `ENABLE_CUSTOM_CODE=false` on any hosted copy.
+
+Same-origin build without Docker (also works for sharing on your own network): `cd frontend; $env:STATIC_EXPORT="1"; $env:NEXT_PUBLIC_API_URL="same-origin"; npm run build`, then `cd ../backend; uvicorn app.main:app --host 0.0.0.0 --port 8000` and open `http://<your-pc-ip>:8000`. Set `APP_PASSWORD` if the network is not private.
+
+## Deployment (split hosting: Vercel + separate backend)
 
 ### 1. Database (PostgreSQL)
 

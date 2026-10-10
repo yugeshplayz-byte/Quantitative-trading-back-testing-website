@@ -17,6 +17,7 @@ from .config import get_settings
 from .custom.runner import CustomCodeError
 from .db import SessionLocal, init_db
 from .services.seed import seed_if_empty
+from .web import PasswordGate, attach_frontend, frontend_path
 
 log = logging.getLogger("quant")
 
@@ -45,6 +46,9 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
+# Optional site-wide password (APP_PASSWORD). Added last so it wraps everything, CORS included.
+app.add_middleware(PasswordGate)
+
 for module in (meta, backtests, simulations, prop, risk, research, custom):
     app.include_router(module.router, prefix="/api")
 
@@ -65,6 +69,11 @@ async def code_error(_: Request, exc: CustomCodeError):
                                     "problems": exc.problems}}, status_code=400)
 
 
-@app.get("/")
-def root():
-    return {"name": "Quant Backtester API", "docs": "/docs", "health": "/api/health"}
+_site = frontend_path()
+if _site is not None:
+    attach_frontend(app, _site)  # one URL serves the website AND /api (must be registered last)
+else:
+
+    @app.get("/")
+    def root():
+        return {"name": "Quant Backtester API", "docs": "/docs", "health": "/api/health"}

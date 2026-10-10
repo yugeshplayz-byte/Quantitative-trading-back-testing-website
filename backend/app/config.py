@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     git_commit: str = ""
     environment: str = "development"
     seed_demo_data: bool = True
+    # Optional password for the WHOLE site (HTTP Basic auth). Strongly recommended for any public link.
+    app_password: str = ""
+    app_username: str = "admin"
+    # Folder holding the exported website (frontend/out). When it exists, FastAPI serves the site itself,
+    # so one URL serves both the UI and the API.
+    frontend_dir: str = ""
     # Real market data: drop CSV files named like MNQ.csv / MNQ_1m.csv into this folder (see docs/REAL_DATA.md).
     real_data_dir: str = "./data/real"
     real_data_tz: str = "America/New_York"  # timezone of timestamps in the CSVs that carry no UTC offset

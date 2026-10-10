@@ -1,6 +1,6 @@
 # Render Blueprint: New -> Blueprint -> select this repo.
-# Creates the FastAPI web service and a Postgres database. ALLOWED_ORIGINS must be set by you
-# (it is the URL of your Vercel frontend) - Render will prompt for it.
+# ONE web service (Docker) serves the website AND the API from a single URL, plus a Postgres database.
+# Render will ask you for APP_PASSWORD (the password for the whole site) - set something long.
 databases:
   - name: quant-db
     plan: free
@@ -9,22 +9,21 @@ databases:
 
 services:
   - type: web
-    name: quant-backtester-api
-    runtime: python
-    rootDir: backend
+    name: quant-backtester
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
       - key: DATABASE_URL
         fromDatabase:
           name: quant-db
           property: connectionString
-      - key: ALLOWED_ORIGINS
+      - key: APP_PASSWORD
         sync: false
+      - key: APP_USERNAME
+        value: admin
       - key: ENVIRONMENT
         value: production
       - key: ENABLE_CUSTOM_CODE
